@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>箭头解谜</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:#0d0d0d;color:#e0e0e0;
+  font-family:"PingFang SC","Microsoft YaHei",sans-serif;
+  min-height:100vh;display:flex;justify-content:center;align-items:center;
+  touch-action:manipulation;-webkit-user-select:none;user-select:none;
+}
+.game-wrap{
+  background:#1a1a1a;border-radius:16px;padding:20px;width:100%;max-width:480px;
+  box-shadow:0 0 40px rgba(100,200,255,0.08);
+}
+.header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:0 4px 14px 4px;border-bottom:1px solid #2a2a2a;margin-bottom:14px;
+}
+.header h1{font-size:1.3rem;font-weight:600;color:#f0f0f0;letter-spacing:2px}
+.header h1 span{color:#5cb8e6}
+.info{display:flex;gap:12px;font-size:.85rem;color:#888}
+.info span{background:#222;padding:4px 10px;border-radius:6px}
+.info em{font-style:normal;color:#5cb8e6;font-weight:600}
+#board{
+  display:grid;gap:4px;margin:0 auto;width:100%;
+  max-width:420px;
+}
+.cell{
+  background:#1e1e1e;border-radius:6px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .12s;aspect-ratio:1/1;position:relative;
+}
+.cell:active{transform:scale(.9)}
+.cell.empty{background:transparent;cursor:default;box-shadow:none}
+.cell.empty:active{transform:none}
+.cell.target{
+  background:transparent;border:2px dashed #5cb8e6;border-radius:6px;
+  cursor:default;
+}
+.cell.target:active{transform:none}
+.cell.target svg{opacity:.35}
+.cell.connected{background:#1e2a2e;box-shadow:inset 0 0 0 1px #3a8ab0}
+.cell.wrong{background:#2a1a1a;box-shadow:inset 0 0 0 1px #e65c5c}
+.cell svg{width:75%;height:75%;display:block}
+.level-bar{
+  display:flex;align-items:center;gap:10px;margin-bottom:14px;
+  padding:0 4px;
+}
+.level-bar label{color:#666;font-size:.8rem}
+.level-bar input{flex:1;accent-color:#5cb8e6;height:4px;cursor:pointer}
+.level-bar em{font-style:normal;color:#5cb8e6;font-size:.85rem;font-weight:600;min-width:20px;text-align:center}
+.controls{display:flex;gap:10px;margin-top:14px}
+.controls button{
+  flex:1;padding:10px 0;border:none;border-radius:8px;
+  font-size:.9rem;font-weight:500;cursor:pointer;transition:all .15s;
+  font-family:inherit;
+}
+.controls button:active{transform:scale(.96)}
+.btn-next{background:#5cb8e6;color:#0d0d0d}
+.btn-next:hover{background:#6ec8f6}
+.btn-reset{background:#2a2a2a;color:#ccc;border:1px solid #3a3a3a}
+.btn-reset:hover{background:#333}
+.modal-overlay{
+  display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,.7);z-index:100;
+  justify-content:center;align-items:center;
+}
+.modal-overlay.show{display:flex}
+.modal{
+  background:#1a1a1a;border-radius:16px;padding:32px 28px 24px;
+  text-align:center;max-width:320px;width:90%;
+  border:1px solid #2a2a2a;animation:pop .3s ease-out;
+}
+@keyframes pop{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+.modal h2{font-size:1.5rem;margin-bottom:6px}
+.modal p{color:#888;font-size:.9rem;margin-bottom:18px;line-height:1.6}
+.modal .big{font-size:2.5rem;color:#5cb8e6;font-weight:700;margin-bottom:4px}
+.modal button{
+  width:100%;padding:12px 0;border:none;border-radius:8px;
+  background:#5cb8e6;color:#0d0d0d;font-size:1rem;font-weight:600;
+  cursor:pointer;font-family:inherit;transition:background .15s;
+}
+.modal button:hover{background:#6ec8f6}
+</style>
+</head>
+<body>
+
+<div class="game-wrap">
+  <div class="header">
+    <h1>箭头<span>解谜</span></h1>
+    <div class="info">
+      <span>关卡 <em id="levelDisplay">1</em></span>
+      <span>步数 <em id="movesDisplay">0</em></span>
+    </div>
+  </div>
+
+  <div class="level-bar">
+    <label>难度</label>
+    <input type="range" id="difficultySlider" min="1" max="10" value="3" oninput="updateDiffLabel()">
+    <em id="diffLabel">3</em>
+  </div>
+
+  <div id="board"></div>
+
+  <div class="controls">
+    <button class="btn-next" id="nextBtn" onclick="nextLevel()">▶ 下一关</button>
+    <button class="btn-reset" onclick="resetLevel()">↺ 重置</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="big" id="modalIcon">🎉</div>
+    <h2 id="modalTitle">恭喜通关！</h2>
+    <p id="modalMsg">你太厉害了</p>
+    <button id="modalBtn" onclick="closeModal();nextLevel()">下一关</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// 箭头解谜 - Arrow Puzzle
+// 点击箭头旋转，每条箭头指向下一个，形成完整回路即为过关
+// 灵感：将所有箭头旋转到正确的方向，使它们首尾相连
+// ============================================================
+
+const DIRS = [
+  {dr:-1, dc: 0, name:'上', angle:0},
+  {dr: 0, dc: 1, name:'右', angle:90},
+  {dr: 1, dc: 0, name:'下', angle:180},
+  {dr: 0, dc:-1, name:'左', angle:270}
+];
+
+let board = [];        // 二维数组，存当前方向(0=上,1=右,2=下,3=左) 或 -1=空
+let targets = [];      // 二维数组，true=目标格, false=普通格
+let targetDirs = [];   // 二维数组，目标格需要朝的方向
+let size = 5;
+let level = 1;
+let moves = 0;
+let isComplete = false;
+
+function getDiff() {
+  return parseInt(document.getElementById('difficultySlider').value);
+}
+
+function updateDiffLabel() {
+  document.getElementById('diffLabel').textContent = getDiff();
+}
+
+// ---------- 生成关卡 ----------
+function generateLevel(lvl, diff) {
+  // size 随等级缓慢增加
+  size = Math.min(4 + Math.floor((lvl - 1) / 3), 8);
+  const numTargets = Math.min(4 + diff + Math.floor((lvl - 1) / 2), size * size - 2);
+
+  // 初始化空棋盘
+  board = [];
+  targets = [];
+  targetDirs = [];
+  for (let r = 0; r < size; r++) {
+    board[r] = [];
+    targets[r] = [];
+    targetDirs[r] = [];
+    for (let c = 0; c < size; c++) {
+      board[r][c] = -1;
+      targets[r][c] = false;
+      targetDirs[r][c] = -1;
+    }
+  }
+
+  // 随机选起点
+  let sr, sc;
+  let attempts = 0;
+  do {
+    sr = Math.floor(Math.random() * size);
+    sc = Math.floor(Math.random() * size);
+    attempts++;
+  } while (attempts < 100 && !canBeStart(sr, sc, size));
+
+  // 尝试生成一条路径
+  let path = generatePath(sr, sc, numTargets, size);
+
+  if (!path || path.length < 3) {
+    // 生成失败就重试（递归安全）
+    return generateLevel(lvl, diff);
+  }
+
+  // 在路径格子上放目标方向
+  for (let i = 0; i < path.length; i++) {
+    const {r, c, dir} = path[i];
+    targets[r][c] = true;
+    targetDirs[r][c] = dir;
+  }
+
+  // 在非路径格子上随机放箭头（干扰项）
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (!targets[r][c]) {
+        // 30% 概率放干扰箭头
+        if (Math.random() < 0.3) {
+          board[r][c] = Math.floor(Math.random() * 4);
+        }
+      }
+    }
+  }
+
+  // 把目标格初始化为随机方向（谜题状态）
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (targets[r][c]) {
+        // 初始方向随机但不等于正确方向（增加难度）
+        let rd;
+        do {
+          rd = Math.floor(Math.random() * 4);
+        } while (rd === targetDirs[r][c] && diff > 2);
+        board[r][c] = rd;
+      }
+    }
+  }
+}
+
+function canBeStart(r, c, s) {
+  // 不在角落附近更合适
+  return r > 0 && r < s-1 && c > 0 && c < s-1;
+}
+
+function generatePath(startR, startC, len, s) {
+  const path = [];
+  const visited = new Set();
+  const key = (r,c) => r+','+c;
+
+  let cr = startR, cc = startC;
+  visited.add(key(cr, cc));
+
+  // 第一步：随机选一个方向
+  const dirs = shuffle([0,1,2,3]);
+  let firstDir = -1;
+
+  for (let d of dirs) {
+    const nr = cr + DIRS[d].dr;
+    const nc = cc + DIRS[d].dc;
+    if (nr >= 0 && nr < s && nc >= 0 && nc < s) {
+      firstDir = d;
+      cr = nr;
+      cc = nc;
+      break;
+    }
+  }
+
+  if (firstDir === -1) return null;
+
+  // 起点：朝第一个格子的方向
+  path.push({r: startR, c: startC, dir: firstDir});
+  visited.add(key(cr, cc));
+
+  // 当前格子要朝向下一个
+  let prevR = startR, prevC = startC;
+
+  // 继续走
+  let maxSteps = len * 3;
+  let steps = 0;
+
+  while (path.length < len && steps < maxSteps) {
+    steps++;
+
+    // 当前格子指向下一个格子（从 prev 到 current 的方向）
+    const incomingDir = getDirBetween(prevR, prevC, cr, cc);
+    if (incomingDir === -1) break;
+
+    // 找下一个格子
+    const nextDirs = shuffle([0,1,2,3]);
+    let found = false;
+
+    for (let d of nextDirs) {
+      const nr = cr + DIRS[d].dr;
+      const nc = cc + DIRS[d].dc;
+      if (nr >= 0 && nr < s && nc >= 0 && nc < s && !visited.has(key(nr,nc))) {
+        // 当前格子方向指向下一个
+        path.push({r: cr, c: cc, dir: d});
+        prevR = cr;
+        prevC = cc;
+        cr = nr;
+        cc = nc;
+        visited.add(key(cr, cc));
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      // 没有未访问的邻居，结束
+      // 最后一个格子指向它可以指的方向，或者指向起点形成回路
+      if (path.length >= 3) {
+        // 指向一个已访问的格子或者指向起点
+        const dirToStart = getDirBetween(cr, cc, startR, startC);
+        if (dirToStart !== -1 && isAdjacent(cr, cc, startR, startC)) {
+          path.push({r: cr, c: cc, dir: dirToStart});
+        }
+      }
+      break;
+    }
+  }
+
+  // 如果路径太短，失败
+  if (path.length < 3) return null;
+
+  return path;
+}
+
+function getDirBetween(r1, c1, r2, c2) {
+  const dr = r2 - r1;
+  const dc = c2 - c1;
+  if (dr === -1 && dc === 0) return 0; // 上
+  if (dr === 0 && dc === 1) return 1;  // 右
+  if (dr === 1 && dc === 0) return 2;  // 下
+  if (dr === 0 && dc === -1) return 3; // 左
+  return -1;
+}
+
+function isAdjacent(r1, c1, r2, c2) {
+  return Math.abs(r1-r2) + Math.abs(c1-c2) === 1;
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// ---------- 获取箭头 SVG ----------
+function getArrowSVG(dir, color, isTarget) {
+  const colors = isTarget ? ['#4a9ac8','#4a9ac8','#4a9ac8','#4a9ac8'] : ['#5cb8e6','#5cb8e6','#5cb8e6','#5cb8e6'];
+  const c = color || colors[dir] || '#5cb8e6';
+  const angle = dir * 90;
+  return `<svg viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg" transform="rotate(${angle},18,18)">
+    <line x1="18" y1="30" x2="18" y2="8" stroke="${c}" stroke-width="2.5" stroke-linecap="round"/>
+    <polyline points="10,16 18,6 26,16" fill="none" stroke="${c}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+function getTargetSVG(dir) {
+  const c = '#5cb8e6';
+  const angle = dir * 90;
+  return `<svg viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg" transform="rotate(${angle},18,18)">
+    <circle cx="18" cy="18" r="10" fill="none" stroke="${c}" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.5"/>
+    <line x1="18" y1="28" x2="18" y2="10" stroke="${c}" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+    <polyline points="12,17 18,8 24,17" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+  </svg>`;
+}
+
+// ---------- 检查是否完成 ----------
+function checkComplete() {
+  // 遍历每个目标格，检查方向是否正确
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (targets[r][c]) {
+        if (board[r][c] !== targetDirs[r][c]) {
+          return false;
+        }
+      }
+    }
+  }
+  // 还需要检查箭头是否形成一条连续路径
+  // 找到起点（没有箭头指向它的目标格）
+  let start = null;
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (targets[r][c]) {
+        // 检查是否有其他目标格指向它
+        let hasIncoming = false;
+        for (let r2 = 0; r2 < size; r2++) {
+          for (let c2 = 0; c2 < size; c2++) {
+            if (targets[r2][c2] && !(r2 === r && c2 === c)) {
+              const d = board[r2][c2];
+              const nr = r2 + DIRS[d].dr;
+              const nc = c2 + DIRS[d].dc;
+              if (nr === r && nc === c) {
+                hasIncoming = true;
+                break;
+              }
+            }
+          }
+          if (hasIncoming) break;
+        }
+        if (!hasIncoming) {
+          start = {r, c};
+          break;
+        }
+      }
+    }
+    if (start) break;
+  }
+
+  if (!start) return false; // 如果形成闭环也可
+
+  // 沿着路径走
+  let cr = start.r, cc = start.c;
+  const visited = new Set();
+  visited.add(cr+','+cc);
+
+  for (let i = 0; i < size * size; i++) {
+    const d = board[cr][cc];
+    const nr = cr + DIRS[d].dr;
+    const nc = cc + DIRS[d].dc;
+
+    if (nr < 0 || nr >= size || nc < 0 || nc >= size) return false;
+    if (!targets[nr][nc]) return false;
+    if (visited.has(nr+','+nc)) {
+      // 回到起点，检查是否覆盖了所有目标格
+      return visited.size === countTargets();
+    }
+    visited.add(nr+','+nc);
+    cr = nr;
+    cc = nc;
+  }
+
+  return false;
+}
+
+function countTargets() {
+  let n = 0;
+  for (let r = 0; r < size; r++)
+    for (let c = 0; c < size; c++)
+      if (targets[r][c]) n++;
+  return n;
+}
+
+// ---------- 渲染 ----------
+function render() {
+  const boardEl = document.getElementById('board');
+  boardEl.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+
+  let html = '';
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      const val = board[r][c];
+      const isTarget = targets[r][c];
+      let cls = 'cell';
+
+      if (val === -1 && !isTarget) {
+        cls += ' empty';
+      }
+      if (isTarget && val === -1) {
+        cls += ' target';
+      }
+
+      let svg = '';
+      if (val !== -1) {
+        svg = getArrowSVG(val, null, false);
+      } else if (isTarget) {
+        svg = getTargetSVG(targetDirs[r][c]);
+      }
+
+      html += `<div class="${cls}" data-r="${r}" data-c="${c}" onclick="clickCell(${r},${c})">${svg}</div>`;
+    }
+  }
+  boardEl.innerHTML = html;
+
+  document.getElementById('levelDisplay').textContent = level;
+  document.getElementById('movesDisplay').textContent = moves;
+}
+
+// ---------- 点击 ----------
+function clickCell(r, c) {
+  if (isComplete) return;
+
+  // 只允许点击有箭头（非空）的格子
+  if (board[r][c] === -1 && !targets[r][c]) return;
+  if (board[r][c] === -1) {
+    // 目标格没有箭头，放一个
+    board[r][c] = 0;
+    moves++;
+    render();
+    checkAndShowResult();
+    return;
+  }
+
+  // 旋转箭头
+  board[r][c] = (board[r][c] + 1) % 4;
+  moves++;
+
+  // 视觉反馈
+  const el = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+  if (el) el.classList.add('wrong');
+  setTimeout(() => { if (el) el.classList.remove('wrong'); }, 200);
+
+  render();
+  checkAndShowResult();
+}
+
+function checkAndShowResult() {
+  if (checkComplete()) {
+    isComplete = true;
+    document.getElementById('modalIcon').textContent = '🎉';
+    document.getElementById('modalTitle').textContent = '箭头连成线！';
+    document.getElementById('modalMsg').textContent = `第 ${level} 关通过！用了 ${moves} 步`;
+    document.getElementById('modalBtn').textContent = '▶ 下一关';
+    document.getElementById('modal').classList.add('show');
+  }
+}
+
+// ---------- 下一关 ----------
+function nextLevel() {
+  level++;
+  moves = 0;
+  isComplete = false;
+  closeModal();
+  const diff = getDiff();
+  generateLevel(level, diff);
+  render();
+}
+
+// ---------- 重置 ----------
+function resetLevel() {
+  moves = 0;
+  isComplete = false;
+  closeModal();
+  const diff = getDiff();
+  generateLevel(level, diff);
+  render();
+}
+
+// ---------- 模态框 ----------
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+}
+
+// ---------- 初始化 ----------
+function initGame() {
+  level = 1;
+  moves = 0;
+  isComplete = false;
+  const diff = getDiff();
+  generateLevel(level, diff);
+  render();
+}
+
+initGame();
+</script>
+</body>
+</html>

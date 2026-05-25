@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>线条消消乐</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:#0d0d0d;color:#e0e0e0;
+  font-family:"PingFang SC","Microsoft YaHei",sans-serif;
+  min-height:100vh;display:flex;justify-content:center;align-items:center;
+  touch-action:manipulation;-webkit-user-select:none;user-select:none;
+}
+.game-wrap{
+  background:#1a1a1a;border-radius:16px;padding:20px;width:100%;max-width:480px;
+  box-shadow:0 0 40px rgba(100,200,255,0.08);
+}
+.header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:0 4px 14px 4px;border-bottom:1px solid #2a2a2a;margin-bottom:12px;
+}
+.header h1{font-size:1.3rem;font-weight:600;color:#f0f0f0;letter-spacing:2px}
+.header h1 span{color:#5cb8e6}
+.info{display:flex;gap:16px;font-size:.85rem;color:#888}
+.info span{background:#222;padding:4px 10px;border-radius:6px}
+.info em{font-style:normal;color:#5cb8e6;font-weight:600}
+#board{
+  display:grid;gap:3px;margin:0 auto;width:100%;
+  aspect-ratio:1 / 1;max-width:440px;
+}
+.cell{
+  background:#1e1e1e;border-radius:4px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s,transform .1s;
+  position:relative;aspect-ratio:1/1;
+}
+.cell:active{transform:scale(.92)}
+.cell.highlight{background:#2a2a3a;box-shadow:inset 0 0 0 1px #5cb8e6}
+.cell.wrong{background:#2a1a1a;box-shadow:inset 0 0 0 1px #e65c5c}
+.cell svg{width:80%;height:80%;display:block}
+.controls{
+  display:flex;gap:10px;margin-top:14px;
+}
+.controls button{
+  flex:1;padding:10px 0;border:none;border-radius:8px;
+  font-size:.9rem;font-weight:500;cursor:pointer;transition:all .15s;
+  font-family:inherit;
+}
+.controls button:active{transform:scale(.96)}
+.btn-new{background:#5cb8e6;color:#0d0d0d}
+.btn-new:hover{background:#6ec8f6}
+.btn-hint{background:#2a2a2a;color:#ccc;border:1px solid #3a3a3a!important}
+.btn-hint:hover{background:#333}
+.btn-hint:disabled{opacity:.4;cursor:default}
+.modal-overlay{
+  display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,.7);z-index:100;
+  justify-content:center;align-items:center;
+}
+.modal-overlay.show{display:flex}
+.modal{
+  background:#1a1a1a;border-radius:16px;padding:32px 28px 24px;
+  text-align:center;max-width:320px;width:90%;
+  border:1px solid #2a2a2a;animation:pop .3s ease-out;
+}
+@keyframes pop{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+.modal h2{font-size:1.5rem;margin-bottom:6px}
+.modal p{color:#888;font-size:.9rem;margin-bottom:18px}
+.modal .score{font-size:2.5rem;color:#5cb8e6;font-weight:700;margin-bottom:4px}
+.modal button{
+  width:100%;padding:12px 0;border:none;border-radius:8px;
+  background:#5cb8e6;color:#0d0d0d;font-size:1rem;font-weight:600;
+  cursor:pointer;font-family:inherit;transition:background .15s;
+}
+.modal button:hover{background:#6ec8f6}
+</style>
+</head>
+<body>
+
+<div class="game-wrap">
+  <div class="header">
+    <h1>线条<span>消消乐</span></h1>
+    <div class="info">
+      <span>得分 <em id="scoreDisplay">0</em></span>
+      <span>步数 <em id="movesDisplay">0</em></span>
+    </div>
+  </div>
+
+  <div id="board"></div>
+
+  <div class="controls">
+    <button class="btn-new" onclick="initGame()">🔄 新一局</button>
+    <button class="btn-hint" id="hintBtn" onclick="giveHint()">💡 提示</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="score" id="finalScore">0</div>
+    <h2 id="modalTitle">恭喜过关！</h2>
+    <p id="modalMsg">你用了 0 步完成</p>
+    <button onclick="closeModal();initGame()">再来一局</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// 线条消消乐 - Line Match
+// 纯线条图形 + 经典三消玩法
+// ============================================================
+
+const SIZE = 8;          // 8×8 棋盘
+const TYPES = 6;         // 6种线条图形
+let board = [];
+let score = 0;
+let moves = 0;
+let selected = null;     // {r, c} 或 null
+let isProcessing = false;
+let hintCells = [];      // 提示高亮
+
+// ---------- 线条图形 SVG ----------
+// 用路径生成6种不同的线条图案
+function getShapeSVG(type, color) {
+  const colors = ['#5cb8e6','#f5a623','#e86a5c','#7ed321','#b381d9','#f5d76e'];
+  const c = color || colors[type];
+  const s = 36; // viewBox 大小
+  const paths = [
+    // 0: 横线
+    `<line x1="4" y1="18" x2="32" y2="18" stroke="${c}" stroke-width="3" stroke-linecap="round"/>`,
+    // 1: 竖线
+    `<line x1="18" y1="4" x2="18" y2="32" stroke="${c}" stroke-width="3" stroke-linecap="round"/>`,
+    // 2: 斜线 /
+    `<line x1="6" y1="30" x2="30" y2="6" stroke="${c}" stroke-width="3" stroke-linecap="round"/>`,
+    // 3: 斜线 \
+    `<line x1="6" y1="6" x2="30" y2="30" stroke="${c}" stroke-width="3" stroke-linecap="round"/>`,
+    // 4: 十字 +
+    `<line x1="4" y1="18" x2="32" y2="18" stroke="${c}" stroke-width="3" stroke-linecap="round"/>
+     <line x1="18" y1="4" x2="18" y2="32" stroke="${c}" stroke-width="3" stroke-linecap="round"/>`,
+    // 5: X 叉
+    `<line x1="6" y1="6" x2="30" y2="30" stroke="${c}" stroke-width="3" stroke-linecap="round"/>
+     <line x1="6" y1="30" x2="30" y2="6" stroke="${c}" stroke-width="3" stroke-linecap="round"/>`
+  ];
+  return `<svg viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">${paths[type]}</svg>`;
+}
+
+// ---------- 棋盘初始化 ----------
+function createBoard() {
+  const b = [];
+  for (let r = 0; r < SIZE; r++) {
+    b[r] = [];
+    for (let c = 0; c < SIZE; c++) {
+      do {
+        b[r][c] = Math.floor(Math.random() * TYPES);
+      } while (hasMatchAt(b, r, c));
+    }
+  }
+  return b;
+}
+
+// 检查在 (r,c) 放置 val 是否会产生三消
+function hasMatchAt(b, r, c) {
+  const val = b[r]?.[c];
+  if (val === undefined) return false;
+  // 横向检查
+  if (c >= 2 && b[r][c-1] === val && b[r][c-2] === val) return true;
+  // 纵向检查
+  if (r >= 2 && b[r-1][c] === val && b[r-2][c] === val) return true;
+  return false;
+}
+
+// ---------- 查找所有可消除 ----------
+function findMatches(b) {
+  const matched = new Set();
+  // 横向
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE - 2; c++) {
+      if (b[r][c] !== -1 && b[r][c] === b[r][c+1] && b[r][c] === b[r][c+2]) {
+        let end = c + 2;
+        while (end + 1 < SIZE && b[r][end+1] === b[r][c]) end++;
+        for (let i = c; i <= end; i++) matched.add(r + ',' + i);
+        c = end;
+      }
+    }
+  }
+  // 纵向
+  for (let c = 0; c < SIZE; c++) {
+    for (let r = 0; r < SIZE - 2; r++) {
+      if (b[r][c] !== -1 && b[r][c] === b[r+1][c] && b[r][c] === b[r+2][c]) {
+        let end = r + 2;
+        while (end + 1 < SIZE && b[end+1][c] === b[r][c]) end++;
+        for (let i = r; i <= end; i++) matched.add(i + ',' + c);
+        r = end;
+      }
+    }
+  }
+  return matched;
+}
+
+// ---------- 消除 + 掉落 + 连锁 ----------
+function clearAndDrop(b) {
+  let totalCleared = 0;
+  let matched = findMatches(b);
+
+  while (matched.size > 0) {
+    totalCleared += matched.size;
+
+    // 消除
+    for (const key of matched) {
+      const [r, c] = key.split(',').map(Number);
+      b[r][c] = -1;
+    }
+
+    // 掉落
+    for (let c = 0; c < SIZE; c++) {
+      let writeRow = SIZE - 1;
+      for (let r = SIZE - 1; r >= 0; r--) {
+        if (b[r][c] !== -1) {
+          b[writeRow][c] = b[r][c];
+          writeRow--;
+        }
+      }
+      // 填充新的
+      for (let r = writeRow; r >= 0; r--) {
+        b[r][c] = Math.floor(Math.random() * TYPES);
+      }
+    }
+
+    matched = findMatches(b);
+  }
+
+  return totalCleared;
+}
+
+// ---------- 检查是否有可交换的移动 ----------
+function hasValidMoves(b) {
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      // 尝试与右边交换
+      if (c + 1 < SIZE) {
+        [b[r][c], b[r][c+1]] = [b[r][c+1], b[r][c]];
+        if (findMatches(b).size > 0) {
+          [b[r][c], b[r][c+1]] = [b[r][c+1], b[r][c]];
+          return true;
+        }
+        [b[r][c], b[r][c+1]] = [b[r][c+1], b[r][c]];
+      }
+      // 尝试与下边交换
+      if (r + 1 < SIZE) {
+        [b[r][c], b[r+1][c]] = [b[r+1][c], b[r][c]];
+        if (findMatches(b).size > 0) {
+          [b[r][c], b[r+1][c]] = [b[r+1][c], b[r][c]];
+          return true;
+        }
+        [b[r][c], b[r+1][c]] = [b[r+1][c], b[r][c]];
+      }
+    }
+  }
+  return false;
+}
+
+// ---------- 获取一个提示 ----------
+function getHintMove(b) {
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (c + 1 < SIZE) {
+        [b[r][c], b[r][c+1]] = [b[r][c+1], b[r][c]];
+        if (findMatches(b).size > 0) {
+          [b[r][c], b[r][c+1]] = [b[r][c+1], b[r][c]];
+          return [{r, c}, {r, c: c+1}];
+        }
+        [b[r][c], b[r][c+1]] = [b[r][c+1], b[r][c]];
+      }
+      if (r + 1 < SIZE) {
+        [b[r][c], b[r+1][c]] = [b[r+1][c], b[r][c]];
+        if (findMatches(b).size > 0) {
+          [b[r][c], b[r+1][c]] = [b[r+1][c], b[r][c]];
+          return [{r, c}, {r: r+1, c}];
+        }
+        [b[r][c], b[r+1][c]] = [b[r+1][c], b[r][c]];
+      }
+    }
+  }
+  return null;
+}
+
+// ---------- 交换两个格子 ----------
+function swapCells(r1, c1, r2, c2) {
+  [board[r1][c1], board[r2][c2]] = [board[r2][c2], board[r1][c1]];
+}
+
+// ---------- 渲染 ----------
+function render() {
+  const boardEl = document.getElementById('board');
+  boardEl.style.gridTemplateColumns = `repeat(${SIZE}, 1fr)`;
+
+  // 清除旧的高亮
+  hintCells = [];
+
+  let html = '';
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      const val = board[r]?.[c];
+      const isSelected = selected && selected.r === r && selected.c === c;
+      const cls = `cell${isSelected ? ' highlight' : ''}`;
+      const svg = val !== undefined && val !== -1 ? getShapeSVG(val) : '';
+      html += `<div class="${cls}" data-r="${r}" data-c="${c}" onclick="clickCell(${r},${c})">${svg}</div>`;
+    }
+  }
+  boardEl.innerHTML = html;
+
+  document.getElementById('scoreDisplay').textContent = score;
+  document.getElementById('movesDisplay').textContent = moves;
+}
+
+// ---------- 点击格子 ----------
+function clickCell(r, c) {
+  if (isProcessing) return;
+  clearHint();
+
+  if (!selected) {
+    selected = {r, c};
+    render();
+    return;
+  }
+
+  // 点击同一个格子 -> 取消选择
+  if (selected.r === r && selected.c === c) {
+    selected = null;
+    render();
+    return;
+  }
+
+  // 检查是否相邻（上下左右）
+  const dr = Math.abs(selected.r - r);
+  const dc = Math.abs(selected.c - c);
+  if ((dr === 1 && dc === 0) || (dr === 0 && dc === 1)) {
+    // 尝试交换
+    trySwap(selected.r, selected.c, r, c);
+  } else {
+    // 选新的格子
+    selected = {r, c};
+    render();
+  }
+}
+
+// ---------- 尝试交换 ----------
+function trySwap(r1, c1, r2, c2) {
+  isProcessing = true;
+  selected = null;
+
+  swapCells(r1, c1, r2, c2);
+  const matched = findMatches(board);
+
+  if (matched.size > 0) {
+    moves++;
+    // 有效交换，消除
+    processMatches();
+  } else {
+    // 无效交换，换回来
+    swapCells(r1, c1, r2, c2);
+    render();
+    // 显示错误反馈
+    const cells = document.querySelectorAll('.cell');
+    cells.forEach(el => {
+      if ((el.dataset.r == r1 && el.dataset.c == c1) ||
+          (el.dataset.r == r2 && el.dataset.c == c2)) {
+        el.classList.add('wrong');
+        setTimeout(() => el.classList.remove('wrong'), 300);
+      }
+    });
+    isProcessing = false;
+  }
+}
+
+// ---------- 连锁消除处理 ----------
+function processMatches() {
+  const cleared = clearAndDrop(board);
+  score += cleared * 10;
+  render();
+
+  // 检查是否还有可用的移动
+  if (!hasValidMoves(board)) {
+    document.getElementById('finalScore').textContent = score;
+    document.getElementById('modalTitle').textContent = '🎉 无步可走！';
+    document.getElementById('modalMsg').textContent = `你一共得了 ${score} 分，用了 ${moves} 步`;
+    document.getElementById('modal').classList.add('show');
+    isProcessing = false;
+    return;
+  }
+
+  isProcessing = false;
+}
+
+// ---------- 提示 ----------
+function giveHint() {
+  if (isProcessing) return;
+  clearHint();
+
+  const move = getHintMove(board);
+  if (!move) {
+    document.getElementById('hintBtn').disabled = true;
+    return;
+  }
+
+  const cells = document.querySelectorAll('.cell');
+  hintCells = move;
+  cells.forEach(el => {
+    const r = parseInt(el.dataset.r);
+    const c = parseInt(el.dataset.c);
+    if (move.some(m => m.r === r && m.c === c)) {
+      el.classList.add('highlight');
+    }
+  });
+
+  setTimeout(clearHint, 1500);
+}
+
+function clearHint() {
+  hintCells = [];
+  document.querySelectorAll('.cell.highlight').forEach(el => el.classList.remove('highlight'));
+}
+
+// ---------- 模态框 ----------
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+}
+
+// ---------- 初始化 ----------
+function initGame() {
+  board = createBoard();
+  score = 0;
+  moves = 0;
+  selected = null;
+  isProcessing = false;
+  document.getElementById('hintBtn').disabled = false;
+  closeModal();
+
+  // 立即检查初始棋盘是否有可用消除
+  let safety = 0;
+  while (!hasValidMoves(board) && safety < 50) {
+    board = createBoard();
+    safety++;
+  }
+
+  render();
+}
+
+// ---------- 启动 ----------
+initGame();
+</script>
+</body>
+</html>
