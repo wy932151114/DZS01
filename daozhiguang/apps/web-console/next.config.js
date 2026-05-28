@@ -1,8 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ['echarts', 'echarts-for-react'],
-  // 不重写API，前端直接通过axios调用NestJS
-  // rewrites 仅用于SSR场景
+  async rewrites() {
+    return [
+      // 代理 /api/* 到 NestJS 后端
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:4000/api/:path*',
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;
