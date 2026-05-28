@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Sun, Moon, Wind, Droplets, Flame, Sparkles } from 'lucide-react';
+import BottomNav from '@/app/h5/_components/BottomNav';
 
 /**
  * 道之光 · H5 每日运势页面
@@ -28,7 +29,6 @@ const SHI_CHEN = [
 ];
 
 function getDayGanzhi(date: Date): { heavenly: string; earthly: string; full: string } {
-  // 简化计算：基于2000年1月1日（甲子日）的偏移
   const ref = new Date(2000, 0, 1);
   const diff = Math.round((date.getTime() - ref.getTime()) / 86400000);
   return {
@@ -47,7 +47,7 @@ function getCurrentShichen(): { name: string; start: string; end: string; index:
     const [eh, em] = sc.end.split(':').map(Number);
     let startMins = sh * 60 + sm;
     let endMins = eh * 60 + em;
-    if (endMins < startMins) endMins += 1440; // 跨天
+    if (endMins < startMins) endMins += 1440;
     if (totalMinutes >= startMins && totalMinutes < endMins) return sc;
   }
   return SHI_CHEN[0];
@@ -57,9 +57,8 @@ const LUNAR_ZH_DAYS = ['初一', '初二', '初三', '初四', '初五', '初六
   '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十',
   '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十'];
 
-// 简化的农历计算
 function getLunarDate(date: Date): string {
-  const ref = new Date(2024, 0, 1); // 2024年1月1日 = 农历十一月二十
+  const ref = new Date(2024, 0, 1);
   const diff = Math.round((date.getTime() - ref.getTime()) / 86400000);
   const lunarDay = (20 + diff) % 30 || 30;
   return LUNAR_ZH_DAYS[lunarDay - 1] || `${lunarDay}日`;
@@ -85,19 +84,14 @@ function generateDailyFortune(baziData: any, dayGanzhi: string): {
   const h = now.getHours();
   const isEvening = h >= 17 || h < 5;
 
-  // 基于日主和当日干支的简易评分
   const baseScore = baziData?.strength?.strengthScore || 50;
   const yongShen = baziData?.usefulGod?.yongShen || [];
   const percentages = baziData?.elementBalance?.percentage || {};
 
-  // 当日天干五行简析
   const gan = dayGanzhi[0];
   const ganWuxing: Record<string, string> = { '甲': '木', '乙': '木', '丙': '火', '丁': '火', '戊': '土', '己': '土', '庚': '金', '辛': '金', '壬': '水', '癸': '水' };
   const todayWuxing = ganWuxing[gan] || '土';
-
   const dayMaster = baziData?.dayMaster || '甲';
-  const dmWuxing = ganWuxing[dayMaster] || '木';
-
   const isLucky = yongShen.includes(todayWuxing);
 
   const scores: Record<FortuneCategory, { score: number; level: string; desc: string }> = {
@@ -179,8 +173,7 @@ export default function FortunePage() {
         </div>
       </header>
 
-      <div className="px-4 pt-4 pb-8 space-y-4">
-        {/* 日期 + 干支 */}
+      <div className="px-4 pt-4 pb-24 space-y-4">
         <div className="rounded-2xl bg-gradient-to-br from-[#0f1525] to-[#1a2332] border border-[#1e293b] p-5">
           <div className="flex justify-between items-center">
             <div>
@@ -204,7 +197,6 @@ export default function FortunePage() {
           </div>
         </div>
 
-        {/* 总运势环 */}
         <div className="rounded-2xl bg-[#0f1525] border border-[#1e293b] p-6 text-center">
           <div className="relative w-28 h-28 mx-auto mb-3">
             <svg viewBox="0 0 120 120" className="w-28 h-28 -rotate-90">
@@ -229,19 +221,15 @@ export default function FortunePage() {
           </div>
         </div>
 
-        {/* 分类运势 */}
         <div className="grid grid-cols-5 gap-2">
           {(Object.entries(FORTUNE_DESCRIPTIONS) as [FortuneCategory, { emoji: string; text: string }][]).map(([key, val]) => {
             const score = fortune.scores[key]?.score || 0;
             const level = fortune.scores[key]?.level || '';
             const isActive = key === activeCategory;
             const color = level === '大吉' || level === '吉' ? '#2ECC71' : level === '中平' ? '#f59e0b' : '#E74C3C';
-
             return (
               <button key={key} onClick={() => setActiveCategory(key)}
-                className={`rounded-xl py-2 text-center border transition-all ${
-                  isActive ? 'bg-[#f59e0b]/10 border-[#f59e0b]/20' : 'bg-[#1a2332] border-[#2a3a4e]'
-                }`}>
+                className={`rounded-xl py-2 text-center border transition-all ${isActive ? 'bg-[#f59e0b]/10 border-[#f59e0b]/20' : 'bg-[#1a2332] border-[#2a3a4e]'}`}>
                 <div className="text-lg">{val.emoji}</div>
                 <div className="text-[10px] text-[#64748b]">{val.text}</div>
                 <div className="text-xs font-bold mt-0.5" style={{ color }}>{score}</div>
@@ -250,7 +238,6 @@ export default function FortunePage() {
           })}
         </div>
 
-        {/* 当日宜忌 */}
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-2xl bg-[#0f1525] border border-[#1e293b] p-4">
             <h3 className="text-xs font-semibold mb-3 text-[#2ECC71]">宜</h3>
@@ -276,7 +263,6 @@ export default function FortunePage() {
           </div>
         </div>
 
-        {/* AI建议 */}
         <div className="rounded-2xl bg-gradient-to-br from-[#0f1525] to-[#1a2332] border border-[#f59e0b]/10 p-4">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles size={14} className="text-[#f59e0b]" />
@@ -288,13 +274,14 @@ export default function FortunePage() {
           </div>
         </div>
 
-        {/* 提示 */}
         <div className="text-center">
           <p className="text-[10px] text-[#4a5a6e]">
             {baziData ? '基于您的八字排盘结果分析' : '排盘后运势分析更精准'}
           </p>
         </div>
       </div>
+
+      <BottomNav />
     </div>
   );
 }

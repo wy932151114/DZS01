@@ -195,6 +195,7 @@ export default function HomePage() {
                 <a href="/h5/fortune" className="flex-1 py-1.5 rounded-lg bg-[#1a2332] border border-[#2a3a4e] text-center text-[10px] text-[#94a3b8] hover:text-[#e2e8f0]">📅 今日运势</a>
                 <a href="/h5/wuxing" className="flex-1 py-1.5 rounded-lg bg-[#1a2332] border border-[#2a3a4e] text-center text-[10px] text-[#94a3b8] hover:text-[#e2e8f0]">🔥 五行详情</a>
                 <a href="/h5/jiugong" className="flex-1 py-1.5 rounded-lg bg-[#1a2332] border border-[#2a3a4e] text-center text-[10px] text-[#94a3b8] hover:text-[#e2e8f0]">🧭 九宫飞星</a>
+                <a href="/h5/dayun" className="flex-1 py-1.5 rounded-lg bg-[#1a2332] border border-[#2a3a4e] text-center text-[10px] text-[#94a3b8] hover:text-[#e2e8f0]">📈 大运流年</a>
                 <a href="/h5/ai" className="flex-1 py-1.5 rounded-lg bg-[#1a2332] border border-[#2a3a4e] text-center text-[10px] text-[#94a3b8] hover:text-[#e2e8f0]">🤖 AI改命</a>
               </div>
             </div>

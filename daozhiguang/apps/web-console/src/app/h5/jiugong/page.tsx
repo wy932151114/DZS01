@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Info } from 'lucide-react';
+import BottomNav from '@/app/h5/_components/BottomNav';
 
 /**
  * 道之光 · H5 九宫飞星页面

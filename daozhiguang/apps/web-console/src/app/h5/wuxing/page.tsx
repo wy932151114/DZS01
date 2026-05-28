@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import BottomNav from '@/app/h5/_components/BottomNav';
 
 /**
  * 道之光 · H5 五行能量可视化页面

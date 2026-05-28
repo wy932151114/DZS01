@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Send, Sparkles, Loader2, Sun, Wind, Compass, BookOpen } from 'lucide-react';
+import BottomNav from '@/app/h5/_components/BottomNav';
 
 /**
  * 道之光 · H5 AI改命问答页面
