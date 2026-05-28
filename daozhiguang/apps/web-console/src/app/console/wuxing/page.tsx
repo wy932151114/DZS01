@@ -180,7 +180,7 @@ export default function WuxingPage() {
                 <div className="text-sm text-[#e2e8f0] mt-1 font-mono">{e?.finalScore || 0}</div>
                 <div className="text-[10px] text-[#64748b] mt-2 space-y-0.5">
                   <div>基础 {e?.base || 0}</div>
-                  <div>月令 {e?.seasonalBoost >= 0 ? `+${e.seasonalBoost}` : e?.seasonalBoost || 0}</div>
+                  <div>月令 {e?.seasonalBoost !== undefined && e.seasonalBoost >= 0 ? `+${e.seasonalBoost}` : e?.seasonalBoost || 0}</div>
                   <div>占比 {e?.finalPercent || 0}%</div>
                 </div>
               </div>

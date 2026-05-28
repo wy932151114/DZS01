@@ -25,14 +25,14 @@ function generateLocalResponse(question: string, baziData: any): string {
   const jiShen = baziData?.usefulGod?.jiShen || [];
   const missing = baziData?.usefulGod?.missing || [];
   const excess = baziData?.usefulGod?.excess || [];
-  const percentages = baziData?.elementBalance?.percentage || {};
+  const percentages = (baziData?.elementBalance?.percentage || {}) as Record<string, number>;
   const dominant = Object.entries(percentages).sort((a, b) => b[1] - a[1])[0]?.[0] || '火';
   const weakest = Object.entries(percentages).sort((a, b) => a[1] - b[1])[0]?.[0] || '水';
 
   if (question.includes('五行') || question.includes('能量')) {
     const missingText = missing.length ? `缺失五行：${missing.join('、')}` : '五行齐全';
     const excessText = excess.length ? `过旺五行：${excess.join('、')}` : '五行均衡';
-    return `【五行能量分析】\n\n您的日主为${dm}，命格${strength}。\n\n当前五行分布：\n${Object.entries(percentages).map(([k, v]) => `- ${k}：${v}%`).join('\n')}\n主导：${dominant} | 最弱：${weakest}\n\n${missingText}\n${excessText}\n\n用神：${yongShen.join('、')} | 忌神：${jiShen.join('、')}\n\n建议：日常多接触${yongShen.map(s => {
+    return `【五行能量分析】\n\n您的日主为${dm}，命格${strength}。\n\n当前五行分布：\n${Object.entries(percentages).map(([k, v]) => `- ${k}：${v}%`).join('\n')}\n主导：${dominant} | 最弱：${weakest}\n\n${missingText}\n${excessText}\n\n用神：${yongShen.join('、')} | 忌神：${jiShen.join('、')}\n\n建议：日常多接触${yongShen.map((s: string) => {
       const dirMap: Record<string, string> = { '木': '东方·绿色', '火': '南方·红色', '土': '中央·黄色', '金': '西方·白色', '水': '北方·黑色' };
       return dirMap[s] || s;
     }).join('、')}元素，有助于平衡命局能量。`;
@@ -55,7 +55,7 @@ function generateLocalResponse(question: string, baziData: any): string {
 
   if (question.includes('风水') || question.includes('居家') || question.includes('房间')) {
     const dirMap: Record<string, string> = { '木': '东', '火': '南', '土': '中', '金': '西', '水': '北' };
-    return `【居家风水建议】\n\n命主日柱${dm} · ${strength}\n\n🏠 布局建议：\n1. 床位宜朝${dirMap[yongShen[0]] || '南'}方\n2. 办公桌宜面向${dirMap[yongShen[0]] || '南'}方\n3. 家中${dirMap[yongShen[0]] || '南'}方保持整洁明亮\n\n🎨 配色建议：\n- 主色调：${yongShen.map(s => { const cMap: Record<string, string> = { '木': '绿色', '火': '红色', '土': '黄色', '金': '白色/金色', '水': '蓝色/黑色' }; return cMap[s] || s; }).join('、')}\n- 避免色：${jiShen.map(s => { const cMap: Record<string, string> = { '木': '绿色', '火': '红色', '土': '黄色', '金': '白色/金色', '水': '蓝色/黑色' }; return cMap[s] || s; }).join('、')}\n\n🪴 摆件建议：\n${yongShen.includes('木') ? '- 绿植（富贵竹、发财树）' : ''}${yongShen.includes('火') ? '\n- 红色饰品、灯具' : ''}${yongShen.includes('土') ? '\n- 水晶、陶瓷摆件' : ''}${yongShen.includes('金') ? '\n- 金属摆件、铜钱' : ''}${yongShen.includes('水') ? '\n- 鱼缸、流水摆件' : ''}`;
+    return `【居家风水建议】\n\n命主日柱${dm} · ${strength}\n\n🏠 布局建议：\n1. 床位宜朝${dirMap[yongShen[0]] || '南'}方\n2. 办公桌宜面向${dirMap[yongShen[0]] || '南'}方\n3. 家中${dirMap[yongShen[0]] || '南'}方保持整洁明亮\n\n🎨 配色建议：\n- 主色调：${yongShen.map((s: string) => { const cMap: Record<string, string> = { '木': '绿色', '火': '红色', '土': '黄色', '金': '白色/金色', '水': '蓝色/黑色' }; return cMap[s] || s; }).join('、')}\n- 避免色：${jiShen.map((s: string) => { const cMap: Record<string, string> = { '木': '绿色', '火': '红色', '土': '黄色', '金': '白色/金色', '水': '蓝色/黑色' }; return cMap[s] || s; }).join('、')}\n\n🪴 摆件建议：\n${yongShen.includes('木') ? '- 绿植（富贵竹、发财树）' : ''}${yongShen.includes('火') ? '\n- 红色饰品、灯具' : ''}${yongShen.includes('土') ? '\n- 水晶、陶瓷摆件' : ''}${yongShen.includes('金') ? '\n- 金属摆件、铜钱' : ''}${yongShen.includes('水') ? '\n- 鱼缸、流水摆件' : ''}`;
   }
 
   if (question.includes('吉日') || question.includes('时辰') || question.includes('日子')) {
