@@ -183,7 +183,23 @@ export default function HomePage() {
               })}
             </div>
 
-            {/* 底部按钮 */}
+            {/* AI分析建议 */}
+            <div className="mt-4 p-3 rounded-xl bg-gradient-to-r from-[#f59e0b]/5 to-[#d97706]/5 border border-[#f59e0b]/10">
+              <h4 className="text-xs font-semibold text-[#f59e0b] mb-2">✨ AI改命简析</h4>
+              <p className="text-xs text-[#94a3b8] leading-relaxed">
+                日主{result.dayMaster}，{result.strength?.bodyStrength || ''}。
+                用神{result.usefulGod?.yongShen?.join('、') || '未知'}，忌神{result.usefulGod?.jiShen?.join('、') || '未知'}。
+                {Object.entries(result.elementBalance?.percentage || {}).sort((a:any,b:any)=>b[1]-a[1]).filter(([,v]:any)=>v>30).map(([k]:any)=>`${k}偏旺`).join('，')}
+              </p>
+              <div className="flex gap-2 mt-3">
+                <a href="/h5/fortune" className="flex-1 py-1.5 rounded-lg bg-[#1a2332] border border-[#2a3a4e] text-center text-[10px] text-[#94a3b8] hover:text-[#e2e8f0]">📅 今日运势</a>
+                <a href="/h5/wuxing" className="flex-1 py-1.5 rounded-lg bg-[#1a2332] border border-[#2a3a4e] text-center text-[10px] text-[#94a3b8] hover:text-[#e2e8f0]">🔥 五行详情</a>
+                <a href="/h5/jiugong" className="flex-1 py-1.5 rounded-lg bg-[#1a2332] border border-[#2a3a4e] text-center text-[10px] text-[#94a3b8] hover:text-[#e2e8f0]">🧭 九宫飞星</a>
+                <a href="/h5/ai" className="flex-1 py-1.5 rounded-lg bg-[#1a2332] border border-[#2a3a4e] text-center text-[10px] text-[#94a3b8] hover:text-[#e2e8f0]">🤖 AI改命</a>
+              </div>
+            </div>
+
+            {/* 底部导航 */}
             <div className="flex gap-2">
               <a href="/console/dashboard" className="flex-1 py-2.5 rounded-xl bg-[#1a2332] border border-[#2a3a4e] text-center text-sm text-[#94a3b8] hover:text-[#e2e8f0] transition-all">
                 管理后台
@@ -206,14 +222,22 @@ export default function HomePage() {
               { icon: '🔥', label: '五行能量', color: '#E74C3C', desc: '实时能量图谱' },
               { icon: '🧭', label: '九宫飞星', color: '#3498DB', desc: '流年吉凶方位' },
               { icon: '🤖', label: 'AI改命', color: '#9B59B6', desc: '个性化改运方案' },
-            ].map((item) => (
-              <a key={item.label} href="/console/dashboard"
+            ].map((item) => {
+              const h5Paths: Record<string, string> = {
+                '每日运势': '/h5/fortune',
+                '五行能量': '/h5/wuxing',
+                '九宫飞星': '/h5/jiugong',
+                'AI改命': '/h5/ai',
+              };
+              return (
+              <a key={item.label} href={h5Paths[item.label] || '/console/dashboard'}
                 className="rounded-2xl bg-[#0f1525] border border-[#1e293b] p-4 hover:border-[rgba(245,158,11,0.2)] transition-all active:scale-[0.97]">
                 <div className="text-2xl mb-2">{item.icon}</div>
                 <div className="text-sm font-semibold">{item.label}</div>
                 <div className="text-[10px] text-[#64748b] mt-0.5">{item.desc}</div>
               </a>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
