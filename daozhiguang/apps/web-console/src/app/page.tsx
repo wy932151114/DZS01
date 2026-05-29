@@ -82,6 +82,8 @@ export default function HomePage() {
       const data = await res.json();
       if (data.success) {
         setResult(data.data);
+        // 把排盘结果写入sessionStorage，供各H5页面读取
+        try { sessionStorage.setItem('dzs_bazi_result', JSON.stringify(data.data)); } catch {}
         // 保存排盘历史到localStorage
         const record = {
           id: Date.now(),
@@ -184,6 +186,39 @@ export default function HomePage() {
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* 时辰选择 */}
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs text-[#64748b] mb-1 block">时（可选，默认午时）</label>
+                <select value={hour} onChange={e => setHour(e.target.value)}
+                  className="w-full bg-[#1a2332] border border-[#2a3a4e] rounded-lg px-3 py-2.5 text-sm text-[#e2e8f0] focus:border-[#f59e0b] focus:outline-none">
+                  <option value="">未知（默认午时）</option>
+                  <option value="23">子时 23:00-00:59</option>
+                  <option value="1">丑时 01:00-02:59</option>
+                  <option value="3">寅时 03:00-04:59</option>
+                  <option value="5">卯时 05:00-06:59</option>
+                  <option value="7">辰时 07:00-08:59</option>
+                  <option value="9">巳时 09:00-10:59</option>
+                  <option value="11">午时 11:00-12:59</option>
+                  <option value="13">未时 13:00-14:59</option>
+                  <option value="15">申时 15:00-16:59</option>
+                  <option value="17">酉时 17:00-18:59</option>
+                  <option value="19">戌时 19:00-20:59</option>
+                  <option value="21">亥时 21:00-22:59</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-[#64748b] mb-1 block">分钟</label>
+                <select value={minute} onChange={e => setMinute(e.target.value)}
+                  className="w-full bg-[#1a2332] border border-[#2a3a4e] rounded-lg px-3 py-2.5 text-sm text-[#e2e8f0] focus:border-[#f59e0b] focus:outline-none">
+                  <option value="0">00分</option>
+                  <option value="15">15分</option>
+                  <option value="30">30分</option>
+                  <option value="45">45分</option>
+                </select>
+              </div>
             </div>
 
             <button onClick={handleSubmit} disabled={loading}

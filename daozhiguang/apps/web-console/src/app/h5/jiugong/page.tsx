@@ -112,6 +112,20 @@ export default function JiugongPage() {
     }
   }, []);
 
+  // 命宫计算：日干→后天八卦方位
+  const MING_GONG: Record<string, number> = {
+    '甲':3,'乙':3,'丙':9,'丁':9,'戊':5,'己':5,'庚':7,'辛':7,'壬':1,'癸':1,
+  };
+  const ELEMENT_DIR: Record<string, string> = {
+    '木':'东','火':'南','土':'中','金':'西','水':'北',
+  };
+  const dm = baziData?.dayMaster || '';
+  const mingGongNum = MING_GONG[dm] || 0;
+  const yongShen = baziData?.usefulGod?.yongShen || [];
+  const jiShen = baziData?.usefulGod?.jiShen || [];
+  const yongDir = ELEMENT_DIR[yongShen[0]] || '';
+  const jiDir = ELEMENT_DIR[jiShen[0]] || '';
+
   const palaces = getNinePalace(now.getFullYear(), now.getMonth() + 1, now.getDate());
   const activePalaces = palaces[mode];
 
@@ -209,6 +223,45 @@ export default function JiugongPage() {
             ))}
           </div>
         </div>
+
+        {/* 命主个人飞星 — 基于八字用神叠加九宫 */}
+        {baziData && (
+          <div className="rounded-2xl bg-gradient-to-br from-[#0f1525] to-[#1a2332] border border-[#f59e0b]/10 p-4">
+            <h3 className="text-xs font-semibold mb-3 text-[#f59e0b]">命主个人飞星</h3>
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-[#94a3b8]">命宫：</span>
+                <span className="text-[#f59e0b] font-bold">{mingGongNum ? `${PALACE_NAMES[mingGongNum]} (${['北','西南','东','东南','中','西北','西','东北','南'][mingGongNum-1]})` : '—'}</span>
+                <span className="text-[#64748b] ml-1">({dm}日主)</span>
+              </div>
+              {yongDir && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[#2ECC71]">用神方位：</span>
+                  <span className="text-[#2ECC71] font-bold">{yongDir}方</span>
+                  <span className="text-[#64748b]">（{yongShen.join('、')}）— 宜坐卧朝向</span>
+                </div>
+              )}
+              {jiDir && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[#E74C3C]">忌神方位：</span>
+                  <span className="text-[#E74C3C] font-bold">{jiDir}方</span>
+                  <span className="text-[#64748b]">（{jiShen.join('、')}）— 宜避开冲煞</span>
+                </div>
+              )}
+              <div className="mt-2 p-2 rounded-lg bg-[#1a2332] border border-[#2a3a4e]">
+                <div className="text-[10px] text-[#64748b] mb-1">当前{mode === 'year' ? '流年' : mode === 'month' ? '流月' : '今日'}吉位指向</div>
+                <div className="flex gap-2 flex-wrap">
+                  {activePalaces?.filter((p: any) => p.type === '吉' || p.type === '大吉').slice(0, 2).map((p: any) => (
+                    <span key={p.pos} className="text-[10px] text-[#2ECC71]">· {PALACE_NAMES[p.pos]}（{directionNames[p.pos]}）</span>
+                  ))}
+                  {(!activePalaces || activePalaces.filter((p: any) => p.type === '吉').length === 0) && (
+                    <span className="text-[10px] text-[#64748b]">当前时段无吉星</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 当日宜忌（基于日飞星） */}
         <div className="rounded-2xl bg-[#0f1525] border border-[#1e293b] p-4">
