@@ -34,3 +34,8 @@ yarn-error.log*
 coverage/
 .nyc_output/
 *.tgz
+
+# 道之光测试编译产物
+packages/core/__tests__/*.js
+packages/core/__tests__/*.d.ts
+packages/core/__tests__/*.d.ts.map

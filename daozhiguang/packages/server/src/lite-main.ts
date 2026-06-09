@@ -40,7 +40,7 @@ async function bootstrap() {
   });
 
   app.enableCors({
-    origin: ['http://localhost:5173', 'http://localhost:8080', 'http://localhost:3333', 'http://172.31.138.38:3333'],
+    origin: true, // 允许所有来源（局域网其他设备的访问）
     credentials: true,
   });
 

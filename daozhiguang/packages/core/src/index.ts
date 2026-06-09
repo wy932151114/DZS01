@@ -3,7 +3,7 @@
 // ============================================================
 
 // 类型导出
-export * from './types';
+export * from './types/index';
 
 // 工具/常量
 export * from './utils/constants';
