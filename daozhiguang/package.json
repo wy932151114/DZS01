@@ -7,12 +7,13 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces",
+    "build": "cd packages/core && npx tsc --outDir dist --skipLibCheck && cd ../.. && cd apps/web-console && npx next build && cd ../..",
     "test": "npm run test --workspaces",
     "dev:core": "npm run dev -w packages/core",
     "dev:server": "npm run dev -w packages/server",
     "dev:web": "npm run dev -w packages/web",
-    "start": "npm run start -w packages/server",
+    "start": "node packages/server/dist/lite-main.js",
+    "start:prod": "node packages/server/dist/lite-main.js",
     "lint": "eslint packages/*/src",
     "docs": "typedoc --out docs/api packages/core/src"
   },

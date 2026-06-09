@@ -50,6 +50,26 @@ async function bootstrap() {
   const express = require('express');
   app.getHttpAdapter().use(express.json());
 
+  // ============================================================
+  // 生产模式：后端托管前端静态文件
+  // 路径：daozhiguang/apps/web-console/out/  (next build输出目录)
+  // ============================================================
+  const path = require('path');
+  const fs = require('fs');
+  const frontendOutDir = path.join(__dirname, '../../apps/web-console/out');
+  if (fs.existsSync(frontendOutDir)) {
+    // 服务静态文件
+    app.getHttpAdapter().use(express.static(frontendOutDir));
+    // 所有非API路由返回 index.html（支持SPA路由）
+    app.getHttpAdapter().use('*', (req: any, res: any, next: any) => {
+      if (req.path.startsWith('/api/')) return next();
+      res.sendFile(path.join(frontendOutDir, 'index.html'));
+    });
+    console.log(`  🖥️  前端静态文件: ${frontendOutDir}`);
+  } else {
+    console.log(`  ⚠️  前端静态目录不存在，仅API模式: ${frontendOutDir}`);
+  }
+
   // 获取引擎实例
   const baziEngine = app.get(BaziEngine);
 
